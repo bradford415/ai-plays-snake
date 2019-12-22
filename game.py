@@ -8,6 +8,7 @@ game.py - Main file for the game snake. This is the only required file as long a
 import pygame
 import random
 import time
+import numpy as np
 
 # CONSTANTS
 snake_block = 20
@@ -40,17 +41,31 @@ class Snake:
             pygame.draw.rect(screen, ORANGE, (rect[0], rect[1], snake_block, snake_block))
 
 
+    # Actions = [Left, Right, Up, Down] w/ one-hot encoding
+    def move(self, action):
+
+        if np.array_equal(action,[1, 0, 0, 0]):
+            self.x_change = -move
+            self.y_change = 0
+        elif np.array_equal(action,[0, 1, 0, 0]):
+            self.x_change = move
+            self.y_change = 0
+        elif np.array_equal(action,[0, 0, 1, 0]):
+            self.x_change = 0
+            self.y_change = -move
+        elif np.array_equal(action,[1, 0, 1, 0]):
+            self.x_change = 0
+            self.y_change = move
+
+
+
 screen = pygame.display.set_mode((SCREEN_X, SCREEN_Y))
 clock = pygame.time.Clock()
 
 # Initializations
 pygame.display.set_caption("Snake")
-icon = pygame.image.load("snake_1.png")
-pygame.display.set_icon(icon)
 font_style = pygame.font.SysFont(None, 40)
 score_font = pygame.font.SysFont("comicsansms", 35)
-
-
 
 
 def points(score, x, y):
@@ -90,25 +105,9 @@ def main():
 
         screen.fill(BLACK)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT: # Close the window
-                running = False
-                continue
+        action = [0,0,1,0]
 
-            # If keystroke is pressed
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    snake.x_change = -move
-                    snake.y_change = 0
-                elif event.key == pygame.K_RIGHT:
-                    snake.x_change = move
-                    snake.y_change = 0
-                elif event.key == pygame.K_UP:
-                    snake.x_change = 0
-                    snake.y_change = -move
-                elif event.key == pygame.K_DOWN:
-                    snake.x_change = 0
-                    snake.y_change = move
+        snake.move(action)
 
         snake.x += snake.x_change
         snake.y += snake.y_change
