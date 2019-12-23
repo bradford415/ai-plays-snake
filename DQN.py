@@ -20,17 +20,23 @@ from keras.optimizer import Adam
 import numpy as np
 import pandas as pd
 
+REPLAY_MEM_SIZE = 1000
+
 
 class DQNAgent:
 
     def __init__(self):
         self.memory = []
         self.learning_rate = 0.0005
+        self.gamma = 0.9 # discount factor/decay rate from Q() equations
         self.state_size = 4
         self.action_size = 4
         self.model = create_network()
+        self.game_over = 0 # flag if the snake crashes
 
 
+    # Assign different scenarios that the snake may be in
+    # This will need to be updated later, 4 does not seem to be enough
     def get_state(self, snake, food):
 
         state = [ 
@@ -49,6 +55,13 @@ class DQNAgent:
 
 
     def reward(self):
+
+        if self.fail
+            reward = -5
+        else
+            reward = 5
+        
+        return reward
         
     
     '''
@@ -78,11 +91,43 @@ class DQNAgent:
 
 
     # Save experience of the model for each time-step
-    def update_memory(self, state, action, reward, next_state):
-        self.memory.append((state, action, reward, next_state)
+    def update_memory(self, state, action, reward, next_state, crash):
+        self.memory.append((state, action, reward, next_state, crash)
 
     # Keep track of current state, action, reward, and next state for each frame/time-stamp
-    def replay_memory(self, state, action, reward, next_state):
+    def replay_memory(self):
+        
+        # Choosing a random sample from replay memory to provide the network with an 
+        # uncorrelated approach. This allows the network to learn different environments
+        # rather than just learning a sequential approach.
+        # Use all memory experiences up until REPLAY_MEM_SIZE, then start grabbing random 1000 samples
+        if len(self.memory) > REPLAY_MEM_SIZE:
+            minibatch = random.sample(self.memory, REPLAY_MEM_SIZE)
+        else:
+            minibatch = memory
+
+        for state, action, reward, next_state, game_over in minibatch:
+            if not game_over:
+                # Calculate the learned value - Last part of the Q() equation
+                new_q = reward + self.gamma * np.amax(self.model.predict(np.array([next_state]))[0])
+            else:
+                new_q = reward # If the game is over there is no next state
+
+            # Grab current q value based off the current state and update the current 
+            # q value to the new q value based off the action taken. Then retrain the 
+            # network off the current state and the new q values
+            current_q = self.model.predict(np.array([state]))
+            current_q[0][action] = new_q 
+            self.model.fit(np.array([state], current_q, epochs=1, verbose=0)
+
+            
+
+        
+        
+        
+
+            
+            
 
 
 
