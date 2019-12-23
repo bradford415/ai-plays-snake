@@ -57,7 +57,14 @@ class Snake:
             self.x_change = 0
             self.y_change = move
 
+class Food:
 
+    def __init__(self):
+        self.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+        self.y = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+
+    def create(self):
+        pygame.draw.rect(screen, PURPLE, (self.x, self.y, snake_block, snake_block))
 
 screen = pygame.display.set_mode((SCREEN_X, SCREEN_Y))
 clock = pygame.time.Clock()
@@ -74,8 +81,7 @@ def points(score, x, y):
 
 
 # Create food
-def food(foodx, foody):
-    pygame.draw.rect(screen, PURPLE, (foodx, foody, snake_block, snake_block))
+
 
 
 # Display messages
@@ -90,6 +96,7 @@ def main():
     game_close = False
 
     snake = Snake()
+    food = Food()
 
     score = 0
     
@@ -98,8 +105,8 @@ def main():
 
     snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
     snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
-    FOOD_X = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-    FOOD_Y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+    food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+    food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
 
     while running:
 
@@ -140,7 +147,7 @@ def main():
                 game_close = True
 
         snake.create(snake_list)
-        food(FOOD_X, FOOD_Y)
+        food.create()
         points(snake_length - 1, 0, 0)
         
 
@@ -161,10 +168,10 @@ def main():
         pygame.display.update() # REQUIRED
 
         # When food is ate
-        if snake.x == FOOD_X and snake.y == FOOD_Y:
+        if snake.x == food.x and snake.y == food.y:
             snake_length += 1
-            FOOD_X = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-            FOOD_Y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+            food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+            food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
             
 
         clock.tick(snake_speed)
