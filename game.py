@@ -9,6 +9,8 @@ import pygame
 import random
 import time
 import numpy as np
+from keras.utils import to_categorical
+from random import randint
 from DQN import DQNAgent
 
 # CONSTANTS
@@ -25,8 +27,7 @@ ORANGE = (255, 140, 0)
 PURPLE = (138, 43, 226)
 RED = (255, 0, 0)
 
-# Initialize pygame
-pygame.init() # REQUIRED
+pygame.init() 
 
 class Snake:
 
@@ -55,7 +56,7 @@ class Snake:
         elif np.array_equal(action,[0, 0, 1, 0]):
             self.x_change = 0
             self.y_change = -move
-        elif np.array_equal(action,[1, 0, 1, 0]):
+        elif np.array_equal(action,[0, 0, 0, 1]):
             self.x_change = 0
             self.y_change = move
 
@@ -143,11 +144,22 @@ def main():
         # First move
         initialize_game(snake, food, agent)
 
+        agent.epsilon = 100 - (num_games * 5)
+
         while running:
 
             screen.fill(BLACK)
 
             current_state = get_state(snake, food)
+
+            # As the game progresses, the chacnes that a random action will be chosen decreases.
+            # to_categorical converts to a one hot encoding, reshaping is because it requires a 
+            # vector and not a tensor
+            if randint(0,100) < agent.epsilon:
+                action = to_categorical(randint(0,3), num_classes=4)
+            else:
+                prediction = model.predict(np.array(current_state.reshape(1,11)))
+                action = to_categorical(np.argmax(prediction[0]), num_classes=4)
 
             snake.move(snake, action, agent)
             snake.x += snake.x_change
@@ -157,6 +169,13 @@ def main():
             snake_head.append(snake.x)
             snake_head.append(snake.y)
             snake_list.append(snake_head)
+
+            next_state = agent.get_state(snake,food)
+            reward = agent.reward()
+            agent.update_memory(current_state, action, reward, next_state, agent.game_over)
+            agent.replay_memory()
+    
+
             
             # Protecting edge case of 1 element
             if len(snake_list) > snake_length:
@@ -172,10 +191,7 @@ def main():
             game.points(snake_length - 1, 0, 0)
             
             while snake.game_over:
-                screen.fill(WHITE)
-                game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
-                game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
-                pygame.display.update()
+                
 
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN or event.type == pygame.QUIT:
@@ -185,7 +201,7 @@ def main():
                         if event.key == pygame.K_SPACE:
                             main()
             
-            pygame.display.update() # REQUIRED
+            pygame.display.update()
 
             # When food is ate
             if snake.x == food.x and snake.y == food.y:
@@ -195,6 +211,15 @@ def main():
                 
 
             clock.tick(snake_speed)
+
+        num_games += 1
+        print("Game number " + num_games)
+        print("Score: " + snake_length)
+
+        screen.fill(WHITE)
+        game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
+        game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
+        pygame.display.update()
 
     pygame.quit()
     quit()

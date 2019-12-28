@@ -55,6 +55,8 @@ class DQNAgent:
                 state[i] = 1
             else 
                 state[i] = 0
+        
+        return np.asarray(state)
 
 
     def reward(self):
