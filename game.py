@@ -9,6 +9,7 @@ import pygame
 import random
 import time
 import numpy as np
+from DQN import DQNAgent
 
 # CONSTANTS
 snake_block = 20
@@ -34,6 +35,7 @@ class Snake:
         self.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
         self.x_change = 0
         self.y_change = 0
+        self.game_over = 0
 
     # Create Snake
     def create(self, snake_all):
@@ -42,7 +44,7 @@ class Snake:
 
 
     # Actions = [Left, Right, Up, Down] w/ one-hot encoding
-    def move(self, action):
+    def move(self, snake, action, agent):
 
         if np.array_equal(action,[1, 0, 0, 0]):
             self.x_change = -move
@@ -57,6 +59,25 @@ class Snake:
             self.x_change = 0
             self.y_change = move
 
+        # Crash scenario
+        if snake.x > SCREEN_X - snake_block:
+            snake.x = SCREEN_X - snake_block
+            game_close = True
+            snake.game_over = True
+        elif snake.x < 0:
+            snake.x = 0
+            game_close = True
+            snake.game_over = True
+        if snake.y > SCREEN_Y - snake_block:
+            snake.y = SCREEN_Y - snake_block
+            game_close = True
+            snake.game_over = True
+        elif snake.y < 0:
+            snake.y = 0
+            game_close = True
+            snake.game_over = True
+
+
 class Food:
 
     def __init__(self):
@@ -66,6 +87,27 @@ class Food:
     def create(self):
         pygame.draw.rect(screen, PURPLE, (self.x, self.y, snake_block, snake_block))
 
+class Game:
+
+    def points(self, score, x, y):
+        value = score_font.render("Your Score: " + str(score), True, RED)
+        screen.blit(value, [x, y])
+
+    # Display messages
+    def message(msg,color):
+        mesg = font_style.render(msg, True, color)
+        screen.blit(mesg, [snake_block*3, SCREEN_Y/2 - 20])
+
+def initialize_game(snake, food, agent):
+    current_state = agent.get_state(snake, food)
+    action = [0,0,1,0] # Random initial action
+    snake.move(snake, action, agent)
+    next_state = agent.get_state(snake,food)
+    reward = agent.reward()
+    agent.update_memory(current_state, action, reward, next_state, agent.game_over)
+    agent.replay_memory()
+    
+
 screen = pygame.display.set_mode((SCREEN_X, SCREEN_Y))
 clock = pygame.time.Clock()
 
@@ -74,31 +116,19 @@ pygame.display.set_caption("Snake")
 font_style = pygame.font.SysFont(None, 40)
 score_font = pygame.font.SysFont("comicsansms", 35)
 
-
-def points(score, x, y):
-    value = score_font.render("Your Score: " + str(score), True, RED)
-    screen.blit(value, [x, y])
-
-
-# Create food
-
-
-
-# Display messages
-def message(msg,color):
-    mesg = font_style.render(msg, True, color)
-    screen.blit(mesg, [snake_block*3, SCREEN_Y/2 - 20])
-
-
 # Game Loop
 def main():
     running = True
     game_close = False
 
+    agent = DQNAgent()
     snake = Snake()
     food = Food()
+    game = Game()
 
+    crash = 0
     score = 0
+    num_games = 0
     
     snake_list = []
     snake_length = 1
@@ -108,73 +138,63 @@ def main():
     food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
     food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
 
-    while running:
+    while num_games < 100
 
-        screen.fill(BLACK)
+        # First move
+        initialize_game(snake, food, agent)
 
-        action = [0,0,1,0]
+        while running:
 
-        snake.move(action)
+            screen.fill(BLACK)
 
-        snake.x += snake.x_change
-        snake.y += snake.y_change
-        
-        snake_head = []
-        snake_head.append(snake.x)
-        snake_head.append(snake.y)
-        snake_list.append(snake_head)
-        
-        if snake.x > SCREEN_X - snake_block:
-            snake.x = SCREEN_X - snake_block
-            game_close = True
-        elif snake.x < 0:
-            snake.x = 0
-            game_close = True
-        if snake.y > SCREEN_Y - snake_block:
-            snake.y = SCREEN_Y - snake_block
-            game_close = True
-        elif snake.y < 0:
-            snake.y = 0
-            game_close = True
+            current_state = get_state(snake, food)
 
-        # Protecting edge case of 1 element
-        if len(snake_list) > snake_length:
-            del snake_list[0]
-
-        # If you hit the snake - [:-1] grabs the end of the list  
-        for x in snake_list[:-1]:
-            if x == snake_head:
-                game_close = True
-
-        snake.create(snake_list)
-        food.create()
-        points(snake_length - 1, 0, 0)
-        
-
-        while game_close:
-            screen.fill(WHITE)
-            message("You Lost! Press Spacebar to play again or Q to Quit", RED)
-            points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
-            pygame.display.update()
-
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN or event.type == pygame.QUIT:
-                    if event.key == pygame.K_q:
-                        game_close = False
-                        running = False
-                    if event.key == pygame.K_SPACE:
-                        main()
-        
-        pygame.display.update() # REQUIRED
-
-        # When food is ate
-        if snake.x == food.x and snake.y == food.y:
-            snake_length += 1
-            food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-            food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+            snake.move(snake, action, agent)
+            snake.x += snake.x_change
+            snake.y += snake.y_change
             
+            snake_head = []
+            snake_head.append(snake.x)
+            snake_head.append(snake.y)
+            snake_list.append(snake_head)
+            
+            # Protecting edge case of 1 element
+            if len(snake_list) > snake_length:
+                del snake_list[0]
 
-        clock.tick(snake_speed)
+            # If you hit the snake - [:-1] grabs the end of the list  
+            for x in snake_list[:-1]:
+                if x == snake_head:
+                    game_close = True
+
+            snake.create(snake_list)
+            food.create()
+            game.points(snake_length - 1, 0, 0)
+            
+            while snake.game_over:
+                screen.fill(WHITE)
+                game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
+                game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
+                pygame.display.update()
+
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN or event.type == pygame.QUIT:
+                        if event.key == pygame.K_q:
+                            game_close = False
+                            running = False
+                        if event.key == pygame.K_SPACE:
+                            main()
+            
+            pygame.display.update() # REQUIRED
+
+            # When food is ate
+            if snake.x == food.x and snake.y == food.y:
+                snake_length += 1
+                food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+                food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+                
+
+            clock.tick(snake_speed)
 
     pygame.quit()
     quit()

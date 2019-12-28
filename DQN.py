@@ -12,6 +12,8 @@ Rewards - rewarding the network for doing good or bad - the +/- 5 are arbitrary 
  + 5 for food eating
  - 5 for game over
 
+Deep Q-Learning does NOT use a Q-table
+
 """
 
 from keras.models import Sequential
@@ -31,6 +33,7 @@ class DQNAgent:
         self.gamma = 0.9 # discount factor/decay rate from Q() equations
         self.state_size = 4
         self.action_size = 4
+        self.epsilon - 0 # For greedy-epsilon method
         self.model = create_network()
         self.game_over = 0 # flag if the snake crashes
 
@@ -55,12 +58,11 @@ class DQNAgent:
 
 
     def reward(self):
-
-        if self.fail
+        if self.game_over:
             reward = -5
-        else
+        else:
             reward = 5
-        
+
         return reward
         
     
