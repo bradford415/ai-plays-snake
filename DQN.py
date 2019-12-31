@@ -1,5 +1,4 @@
 """
-
 States - Specific scenarios encountered in the game 
 [head above food,head below food, head right of food ,head left of food]
     - Currently using these basic 4 states to get started, will most likely need 

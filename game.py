@@ -1,7 +1,4 @@
 """
-Purpose: The purpose of this file is to recreate the game "Snake". Now that I have control of the user inputs,
-         I hope to be able to apply a machine learning algorithm, Q - learning, to teach an AI to play this game.
-
 game.py - Main file for the game snake. This is the only required file as long as the user as the 
           pygame module installed.
 """
@@ -132,8 +129,6 @@ def main():
     snake_list = []
     snake_length = 1
 
-    
-
     while num_games < 100:
 
         snake = Snake()
@@ -143,7 +138,6 @@ def main():
         initialize_game(snake, food, agent)
 
         agent.epsilon = 90 - (num_games * 10)
-        screen.fill(BLACK)
 
         snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
         snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
@@ -152,6 +146,8 @@ def main():
 
 
         while running:
+
+            screen.fill(BLACK)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: # Close the window
