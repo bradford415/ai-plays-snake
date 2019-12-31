@@ -18,7 +18,7 @@ Deep Q-Learning does NOT use a Q-table
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.optimizer import Adam
+from keras.optimizers import Adam
 import numpy as np
 import pandas as pd
 
@@ -33,8 +33,8 @@ class DQNAgent:
         self.gamma = 0.9 # discount factor/decay rate from Q() equations
         self.state_size = 4
         self.action_size = 4
-        self.epsilon - 0 # For greedy-epsilon method
-        self.model = create_network()
+        self.epsilon = 0 # For greedy-epsilon method
+        self.model = self.create_network()
         self.game_over = 0 # flag if the snake crashes
 
 
@@ -53,7 +53,7 @@ class DQNAgent:
         for i in range(len(state)):
             if state[i]:
                 state[i] = 1
-            else 
+            else:
                 state[i] = 0
         
         return np.asarray(state)
@@ -85,9 +85,9 @@ class DQNAgent:
         # Input_dim only needs to be specified on the first layer
         # Softmax normalizes the outputs to look like a probablity distribution
         model = Sequential()    
-        model.add(Dense(output_dim=120, activation="ReLU", input_dim=self.state_size))
-        model.add(Dense(output_dim=120, activation="ReLU"))
-        model.add(Dense(output_dim=120, activation="ReLU"))
+        model.add(Dense(output_dim=120, activation="relu", input_dim=self.state_size))
+        model.add(Dense(output_dim=120, activation="relu"))
+        model.add(Dense(output_dim=120, activation="relu"))
         model.add(Dense(output_dim=self.action_size, activation="softmax"))
         model.compile(metrics=["accuracy"], loss="mse", optimizer=Adam(self.learning_rate))
 
@@ -96,7 +96,7 @@ class DQNAgent:
 
     # Save experience of the model for each time-step
     def update_memory(self, state, action, reward, next_state, crash):
-        self.memory.append((state, action, reward, next_state, crash)
+        self.memory.append((state, action, reward, next_state, crash))
 
     # Keep track of current state, action, reward, and next state for each frame/time-stamp
     def replay_memory(self):
@@ -108,7 +108,7 @@ class DQNAgent:
         if len(self.memory) > REPLAY_MEM_SIZE:
             minibatch = random.sample(self.memory, REPLAY_MEM_SIZE)
         else:
-            minibatch = memory
+            minibatch = self.memory
 
         for state, action, reward, next_state, game_over in minibatch:
             if not game_over:
@@ -121,24 +121,5 @@ class DQNAgent:
             # q value to the new q value based off the action taken. Then retrain the 
             # network off the current state and the new q values
             current_q = self.model.predict(np.array([state]))
-            current_q[0][action] = new_q 
-            self.model.fit(np.array([state], current_q, epochs=1, verbose=0)
-
-            
-
-        
-        
-        
-
-            
-            
-
-
-
-    
-    
-
-        
-
-
-
+            current_q[0][np.argmax(action)] = new_q 
+            self.model.fit(np.array([state]), current_q, epochs=1, verbose=0)

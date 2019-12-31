@@ -95,7 +95,7 @@ class Game:
         screen.blit(value, [x, y])
 
     # Display messages
-    def message(msg,color):
+    def message(self, msg,color):
         mesg = font_style.render(msg, True, color)
         screen.blit(mesg, [snake_block*3, SCREEN_Y/2 - 20])
 
@@ -123,8 +123,6 @@ def main():
     game_close = False
 
     agent = DQNAgent()
-    snake = Snake()
-    food = Food()
     game = Game()
 
     crash = 0
@@ -134,23 +132,33 @@ def main():
     snake_list = []
     snake_length = 1
 
-    snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-    snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
-    food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-    food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+    
 
-    while num_games < 100
+    while num_games < 100:
+
+        snake = Snake()
+        food = Food()
 
         # First move
         initialize_game(snake, food, agent)
 
-        agent.epsilon = 100 - (num_games * 5)
+        agent.epsilon = 90 - (num_games * 10)
+        screen.fill(BLACK)
+
+        snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+        snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+        food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+        food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+
 
         while running:
 
-            screen.fill(BLACK)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT: # Close the window
+                    pygame.quit()    
+                    quit()
 
-            current_state = get_state(snake, food)
+            current_state = agent.get_state(snake, food)
 
             # As the game progresses, the chacnes that a random action will be chosen decreases.
             # to_categorical converts to a one hot encoding, reshaping is because it requires a 
@@ -158,7 +166,7 @@ def main():
             if randint(0,100) < agent.epsilon:
                 action = to_categorical(randint(0,3), num_classes=4)
             else:
-                prediction = model.predict(np.array(current_state.reshape(1,11)))
+                prediction = agent.model.predict(np.array(current_state.reshape(1,4)))
                 action = to_categorical(np.argmax(prediction[0]), num_classes=4)
 
             snake.move(snake, action, agent)
@@ -175,8 +183,6 @@ def main():
             agent.update_memory(current_state, action, reward, next_state, agent.game_over)
             agent.replay_memory()
     
-
-            
             # Protecting edge case of 1 element
             if len(snake_list) > snake_length:
                 del snake_list[0]
@@ -192,14 +198,13 @@ def main():
             
             while snake.game_over:
                 
-
-                for event in pygame.event.get():
-                    if event.type == pygame.KEYDOWN or event.type == pygame.QUIT:
-                        if event.key == pygame.K_q:
-                            game_close = False
-                            running = False
-                        if event.key == pygame.K_SPACE:
-                            main()
+                screen.fill(WHITE)
+                game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
+                game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
+                pygame.display.update()
+                
+                pygame.time.wait(2000)
+                main()
             
             pygame.display.update()
 
@@ -208,13 +213,13 @@ def main():
                 snake_length += 1
                 food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
                 food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
-                
-
+            
             clock.tick(snake_speed)
+            pygame.time.wait(300)
 
         num_games += 1
-        print("Game number " + num_games)
-        print("Score: " + snake_length)
+        print("Game number " + str(num_games))
+        print("Score: " + str(snake_length))
 
         screen.fill(WHITE)
         game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
