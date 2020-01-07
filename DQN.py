@@ -14,7 +14,6 @@ Rewards - rewarding the network for doing good or bad - the +/- 5 are arbitrary 
 Deep Q-Learning does NOT use a Q-table
 
 """
-
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.optimizers import Adam
@@ -27,7 +26,8 @@ REPLAY_MEM_SIZE = 1000
 class DQNAgent:
 
     def __init__(self):
-        self.memory = []
+        self.short_memory = []
+        self.long_memory = []
         self.learning_rate = 0.0005
         self.gamma = 0.9 # discount factor/decay rate from Q() equations
         self.state_size = 4
@@ -35,6 +35,7 @@ class DQNAgent:
         self.epsilon = 0 # For greedy-epsilon method
         self.model = self.create_network()
         self.game_over = 0 # flag if the snake crashes
+        self.eaten = 0
 
 
     # Assign different scenarios that the snake may be in
@@ -59,11 +60,16 @@ class DQNAgent:
 
 
     def reward(self):
+        reward = 0
         if self.game_over:
             reward = -5
-        else:
+            print(reward)
+            return reward
+        
+        if self.eaten:
             reward = 5
-
+            print(reward)
+        print(reward)
         return reward
         
     
@@ -122,3 +128,18 @@ class DQNAgent:
             current_q = self.model.predict(np.array([state]))
             current_q[0][np.argmax(action)] = new_q 
             self.model.fit(np.array([state]), current_q, epochs=1, verbose=0)
+
+    
+    def short_memory(self, state, action, reward, next_state, game_over):
+        if not game_over:
+            # Calculate the learned value - Last part of the Q() equation
+            new_q = reward + self.gamma * np.amax(self.model.predict(np.array([next_state]))[0])
+        else:
+            new_q = reward # If the game is over there is no next state
+
+        # Grab current q value based off the current state and update the current 
+        # q value to the new q value based off the action taken. Then retrain the 
+        # network off the current state and the new q values
+        current_q = self.model.predict(np.array([state]))
+        current_q[0][np.argmax(action)] = new_q 
+        self.model.fit(np.array([state]), current_q, epochs=1, verbose=0)

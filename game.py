@@ -12,7 +12,7 @@ from DQN import DQNAgent
 
 # CONSTANTS
 snake_block = 20
-snake_speed = 20
+snake_speed = 50
 move = snake_block # amount snake moves per frame
 SCREEN_X = 800
 SCREEN_Y = 600
@@ -42,7 +42,10 @@ class Snake:
 
 
     # Actions = [Left, Right, Up, Down] w/ one-hot encoding
-    def move(self, snake, action, agent):
+    def move(self, snake, food, action, agent):
+
+        if agent.eaten:
+            agent.eaten = 0
 
         if np.array_equal(action,[1, 0, 0, 0]):
             self.x_change = -move
@@ -57,23 +60,30 @@ class Snake:
             self.x_change = 0
             self.y_change = move
 
+        # When food is ate
+        if snake.x == food.x and snake.y == food.y:
+            snake_length += 1
+            food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
+            food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+            agent.eaten = 1
+
         # Crash scenario
         if snake.x > SCREEN_X - snake_block:
             snake.x = SCREEN_X - snake_block
             game_close = True
-            snake.game_over = True
+            agent.game_over = True
         elif snake.x < 0:
             snake.x = 0
             game_close = True
-            snake.game_over = True
+            agent.game_over = True
         if snake.y > SCREEN_Y - snake_block:
             snake.y = SCREEN_Y - snake_block
             game_close = True
-            snake.game_over = True
+            agent.game_over = True
         elif snake.y < 0:
             snake.y = 0
             game_close = True
-            snake.game_over = True
+            agent.game_over = True
 
 
 class Food:
@@ -99,7 +109,7 @@ class Game:
 def initialize_game(snake, food, agent):
     current_state = agent.get_state(snake, food)
     action = [0,0,1,0] # Random initial action
-    snake.move(snake, action, agent)
+    snake.move(snake, food, action, agent)
     next_state = agent.get_state(snake,food)
     reward = agent.reward()
     agent.update_memory(current_state, action, reward, next_state, agent.game_over)
@@ -136,6 +146,7 @@ def main():
 
         # First move
         initialize_game(snake, food, agent)
+        agent.game_over = 0
 
         agent.epsilon = 90 - (num_games * 10)
 
@@ -154,6 +165,11 @@ def main():
                     pygame.quit()    
                     quit()
 
+            if agent.eaten:
+                agent.eaten = 0
+            if agent.game_over:
+                agent.game_over = 0
+
             current_state = agent.get_state(snake, food)
 
             # As the game progresses, the chacnes that a random action will be chosen decreases.
@@ -161,11 +177,13 @@ def main():
             # vector and not a tensor
             if randint(0,100) < agent.epsilon:
                 action = to_categorical(randint(0,3), num_classes=4)
+                print("random")
             else:
                 prediction = agent.model.predict(np.array(current_state.reshape(1,4)))
                 action = to_categorical(np.argmax(prediction[0]), num_classes=4)
+                print("Calculated")
 
-            snake.move(snake, action, agent)
+            snake.move(snake, food, action, agent)
             snake.x += snake.x_change
             snake.y += snake.y_change
             
@@ -176,8 +194,8 @@ def main():
 
             next_state = agent.get_state(snake,food)
             reward = agent.reward()
+            agent.short_memory(current_state, action, reward, next_state, agent.game_over)
             agent.update_memory(current_state, action, reward, next_state, agent.game_over)
-            agent.replay_memory()
     
             # Protecting edge case of 1 element
             if len(snake_list) > snake_length:
@@ -187,6 +205,7 @@ def main():
             for x in snake_list[:-1]:
                 if x == snake_head:
                     game_close = True
+                    agent.game_over = True
 
             snake.create(snake_list)
             food.create()
@@ -204,15 +223,12 @@ def main():
             
             pygame.display.update()
 
-            # When food is ate
-            if snake.x == food.x and snake.y == food.y:
-                snake_length += 1
-                food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
-                food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
+            
             
             clock.tick(snake_speed)
             pygame.time.wait(300)
 
+        agent.replay_memory()
         num_games += 1
         print("Game number " + str(num_games))
         print("Score: " + str(snake_length))
