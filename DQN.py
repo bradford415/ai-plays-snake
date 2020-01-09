@@ -17,17 +17,17 @@ Deep Q-Learning does NOT use a Q-table
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.optimizers import Adam
+import random
 import numpy as np
 import pandas as pd
 
 REPLAY_MEM_SIZE = 1000
 
-
 class DQNAgent:
 
     def __init__(self):
-        self.short_memory = []
-        self.long_memory = []
+        #self.short_memory = np.array([]) # used for LSTM
+        self.memory = [] # long term memory
         self.learning_rate = 0.0005
         self.gamma = 0.9 # discount factor/decay rate from Q() equations
         self.state_size = 4
@@ -95,6 +95,7 @@ class DQNAgent:
         model.add(Dense(output_dim=120, activation="relu"))
         model.add(Dense(output_dim=self.action_size, activation="softmax"))
         model.compile(metrics=["accuracy"], loss="mse", optimizer=Adam(self.learning_rate))
+        model.summary()
 
         return model
 
@@ -133,13 +134,13 @@ class DQNAgent:
     def short_memory(self, state, action, reward, next_state, game_over):
         if not game_over:
             # Calculate the learned value - Last part of the Q() equation
-            new_q = reward + self.gamma * np.amax(self.model.predict(np.array([next_state]))[0])
+            new_q = reward + self.gamma * np.amax(self.model.predict(next_state.reshape((1,4)))[0])
         else:
             new_q = reward # If the game is over there is no next state
 
         # Grab current q value based off the current state and update the current 
         # q value to the new q value based off the action taken. Then retrain the 
         # network off the current state and the new q values
-        current_q = self.model.predict(np.array([state]))
+        current_q = self.model.predict(state.reshape((1,4)))
         current_q[0][np.argmax(action)] = new_q 
-        self.model.fit(np.array([state]), current_q, epochs=1, verbose=0)
+        self.model.fit(state.reshape((1,4)), current_q, epochs=1, verbose=0)

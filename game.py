@@ -34,6 +34,7 @@ class Snake:
         self.x_change = 0
         self.y_change = 0
         self.game_over = 0
+        self.length = 1
 
     # Create Snake
     def create(self, snake_all):
@@ -62,7 +63,7 @@ class Snake:
 
         # When food is ate
         if snake.x == food.x and snake.y == food.y:
-            snake_length += 1
+            snake.length += 1
             food.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
             food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
             agent.eaten = 1
@@ -97,8 +98,8 @@ class Food:
 
 class Game:
 
-    def points(self, score, x, y):
-        value = score_font.render("Your Score: " + str(score), True, RED)
+    def stats(self, score, x, y, title=""):
+        value = score_font.render(str(title) + ": " + str(score), True, RED)
         screen.blit(value, [x, y])
 
     # Display messages
@@ -136,19 +137,19 @@ def main():
     score = 0
     num_games = 0
     
-    snake_list = []
-    snake_length = 1
 
     while num_games < 100:
 
+        snake_list = []
         snake = Snake()
+
         food = Food()
 
         # First move
         initialize_game(snake, food, agent)
         agent.game_over = 0
 
-        agent.epsilon = 90 - (num_games * 10)
+        agent.epsilon = 70 - (num_games * 5)
 
         snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
         snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
@@ -156,7 +157,7 @@ def main():
         food.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
 
 
-        while running:
+        while not agent.game_over:
 
             screen.fill(BLACK)
 
@@ -175,6 +176,7 @@ def main():
             # As the game progresses, the chacnes that a random action will be chosen decreases.
             # to_categorical converts to a one hot encoding, reshaping is because it requires a 
             # vector and not a tensor
+            print("Epsilon: " + str(agent.epsilon))
             if randint(0,100) < agent.epsilon:
                 action = to_categorical(randint(0,3), num_classes=4)
                 print("random")
@@ -198,7 +200,7 @@ def main():
             agent.update_memory(current_state, action, reward, next_state, agent.game_over)
     
             # Protecting edge case of 1 element
-            if len(snake_list) > snake_length:
+            if len(snake_list) > snake.length:
                 del snake_list[0]
 
             # If you hit the snake - [:-1] grabs the end of the list  
@@ -209,34 +211,26 @@ def main():
 
             snake.create(snake_list)
             food.create()
-            game.points(snake_length - 1, 0, 0)
-            
-            while snake.game_over:
-                
-                screen.fill(WHITE)
-                game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
-                game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
-                pygame.display.update()
-                
-                pygame.time.wait(2000)
-                main()
+            game.stats(snake.length - 1, 0, 0, title="Score")
+            game.stats(num_games, 600, 0, title="Game")
             
             pygame.display.update()
 
-            
-            
             clock.tick(snake_speed)
             pygame.time.wait(300)
 
+        # Game over scenario
         agent.replay_memory()
         num_games += 1
         print("Game number " + str(num_games))
-        print("Score: " + str(snake_length))
+        print("Score: " + str(snake.length - 1))
 
         screen.fill(WHITE)
-        game.message("You Lost! Press Spacebar to play again or Q to Quit", RED)
-        game.points(snake_length - 1, snake_block*3, SCREEN_Y/2 + 30)
+        game.message("You Lost! The game will restart automatically", RED)
+        game.stats(snake.length - 1, snake_block*3, SCREEN_Y/2 + 30, "Final Score")
         pygame.display.update()
+        pygame.time.wait(2000)
+
 
     pygame.quit()
     quit()
