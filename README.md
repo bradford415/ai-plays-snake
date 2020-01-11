@@ -1,4 +1,4 @@
-# Deep Q-Learning Snake AI
+# Snake AI Using Deep Q-Learning
 ## Overview
 This AI uses Deep Q-Learning to learn how to play the game snake. Essentially, the Deep Q-Network (DQN) is fed states. These states are specific
 scenarios the snake will encounter throughout the game, encoded with one-hot labels. The DQN will update the action Q-values based on the 
