@@ -13,7 +13,7 @@ from DQN import DQNAgent
 
 # CONSTANTS
 snake_block = 20
-snake_speed = 200
+snake_speed = 50
 move = snake_block # amount snake moves per frame
 SCREEN_X = 800
 SCREEN_Y = 600
@@ -109,13 +109,13 @@ class Game:
         mesg = font_style.render(msg, True, color)
         screen.blit(mesg, [snake_block*3, SCREEN_Y/2 - 20])
 
-def initialize_game(snake, food, agent):
-    current_state = agent.get_state(snake, food)
+def initialize_game(snake, food, agent, snake_list):
+    current_state = agent.get_state(snake, food, agent, snake_list)
     action = [0,0,1,0] # Random initial action
     snake.old_dist_food = math.sqrt(((food.x - snake.x)**2) + ((food.y - snake.y)**2))
     snake.move(snake, food, action, agent)
-    next_state = agent.get_state(snake,food)
-    reward = agent.reward(snake, food)
+    next_state = agent.get_state(snake,food, agent, snake_list)
+    reward = 0
     agent.update_memory(current_state, action, reward, next_state, agent.game_over)
     agent.replay_memory()
     
@@ -131,7 +131,6 @@ score_font = pygame.font.SysFont("comicsansms", 35)
 # Game Loop
 def main():
     running = True
-    game_close = False
 
     agent = DQNAgent()
     game = Game()
@@ -141,7 +140,7 @@ def main():
     num_games = 0
     
 
-    while num_games < 300:
+    while num_games < 2000:
 
         snake_list = []
         snake = Snake()
@@ -149,7 +148,7 @@ def main():
         food = Food()
 
         # First move
-        initialize_game(snake, food, agent)
+        initialize_game(snake, food, agent, snake_list)
         agent.game_over = 0
 
         agent.epsilon = 30 - num_games
@@ -175,7 +174,7 @@ def main():
             if agent.game_over:
                 agent.game_over = 0
 
-            current_state = agent.get_state(snake, food)
+            current_state = agent.get_state(snake, food, agent, snake_list)
 
             # As the game progresses, the chacnes that a random action will be chosen decreases.
             # to_categorical converts to a one hot encoding, reshaping is because it requires a 
@@ -192,6 +191,7 @@ def main():
             snake.old_dist_food = math.sqrt(((food.x - snake.x)**2) + ((food.y - snake.y)**2))
 
             snake.move(snake, food, action, agent)
+
             snake.x += snake.x_change
             snake.y += snake.y_change
             
@@ -200,11 +200,8 @@ def main():
             snake_head.append(snake.y)
             snake_list.append(snake_head)
 
-            next_state = agent.get_state(snake,food)
+            next_state = agent.get_state(snake, food, agent, snake_list)
             reward = agent.reward(snake, food)
-            agent.short_memory(current_state, action, reward, next_state, agent.game_over)
-            agent.update_memory(current_state, action, reward, next_state, agent.game_over)
-    
             # Protecting edge case of 1 element
             if len(snake_list) > snake.length:
                 del snake_list[0]
@@ -212,8 +209,14 @@ def main():
             # If you hit the snake - [:-1] grabs the end of the list  
             for x in snake_list[:-1]:
                 if x == snake_head:
-                    game_close = True
                     agent.game_over = True
+                    reward = -50
+                    print("New Reward: " + str(reward))
+                    
+            agent.short_memory(current_state, action, reward, next_state, agent.game_over)
+            agent.update_memory(current_state, action, reward, next_state, agent.game_over)
+    
+            
 
             snake.create(snake_list)
             food.create()
@@ -223,13 +226,12 @@ def main():
             pygame.display.update()
 
             clock.tick(snake_speed)
-            pygame.time.wait(300)
+            pygame.time.wait(100)
+
 
         # Game over scenario
         agent.replay_memory()
         num_games += 1
-        print("Game number " + str(num_games))
-        print("Score: " + str(snake.length - 1))
 
         screen.fill(WHITE)
         game.message("You Lost! The game will restart automatically", RED)

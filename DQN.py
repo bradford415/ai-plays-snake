@@ -8,8 +8,10 @@ Actions - Action to take based of the scenarios - One-hot Encoding
 [Left, Right, Up, Down]
 
 Rewards - rewarding the network for doing good or bad - the +/- 5 are arbitrary values
- + 5 for food eating
- - 5 for game over
+ + 30 for food eating
+ - 10 for game over
+ + 1  for getting closer to the food
+ - 1  for moving away from the food
 
 Deep Q-Learning does NOT use a Q-table
 
@@ -41,7 +43,7 @@ class DQNAgent:
 
     # Assign different scenarios that the snake may be in
     # This will need to be updated later, 4 does not seem to be enough
-    def get_state(self, snake, food):
+    def get_state(self, snake, food, agent, snake_list):
 
         state = [ 
             snake.x >= 800-20, # Right wall
@@ -52,7 +54,7 @@ class DQNAgent:
             snake.x > food.x, # Snake is right of food
             snake.y < food.y, # Snake is above food
             snake.y > food.y,  # Snake is below food
-            snake.length > 2 and not agent.eaten # If the snake is greater than 2 - prevent from backing into itself
+            snake.length > 2
             ]
 
         # Initialize to 1's or 0's
@@ -62,7 +64,7 @@ class DQNAgent:
             else:
                 state[i] = 0
 
-        print(state, food)
+        print(state)
         
         return np.asarray(state)
 
@@ -76,13 +78,12 @@ class DQNAgent:
             reward = -10
             print("Reward: " + str(reward))
             return reward
-        
         if self.eaten:
             reward = 30
             print("Reward: " + str(reward))
             return reward
         
-        if snake.old_dist_food > new_dist_food:
+        if snake.old_dist_food > new_dist_food and snake:
             reward = 1
             print("Reward: " + str(reward))
             return reward
