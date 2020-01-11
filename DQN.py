@@ -18,6 +18,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.optimizers import Adam
 import random
+import math
 import numpy as np
 import pandas as pd
 
@@ -30,7 +31,7 @@ class DQNAgent:
         self.memory = [] # long term memory
         self.learning_rate = 0.0005
         self.gamma = 0.9 # discount factor/decay rate from Q() equations
-        self.state_size = 4
+        self.state_size = 9
         self.action_size = 4
         self.epsilon = 0 # For greedy-epsilon method
         self.model = self.create_network()
@@ -43,10 +44,15 @@ class DQNAgent:
     def get_state(self, snake, food):
 
         state = [ 
+            snake.x >= 800-20, # Right wall
+            snake.x <= 0, # Left wall
+            snake.y >= 600 - 20, # Bottom wall 
+            snake.y <= 0, # Top wall
             snake.x < food.x, # Snake is left of food          
             snake.x > food.x, # Snake is right of food
             snake.y < food.y, # Snake is above food
-            snake.y > food.y  # Snake is below food
+            snake.y > food.y,  # Snake is below food
+            snake.length > 2 # If the snake is greater than 2 - prevent from backing into itself
             ]
 
         # Initialize to 1's or 0's
@@ -55,21 +61,33 @@ class DQNAgent:
                 state[i] = 1
             else:
                 state[i] = 0
+
+        print(state, food)
         
         return np.asarray(state)
 
 
-    def reward(self):
-        reward = 0
+    def reward(self, snake, food):
+
+        new_dist_food = math.sqrt(((food.x - snake.x)**2) + ((food.y - snake.y)**2))
+
+        reward = -1
         if self.game_over:
-            reward = -5
-            print(reward)
+            reward = -10
+            print("Reward: " + str(reward))
             return reward
         
         if self.eaten:
-            reward = 5
-            print(reward)
-        print(reward)
+            reward = 30
+            print("Reward: " + str(reward))
+            return reward
+        
+        if snake.old_dist_food > new_dist_food:
+            reward = 1
+            print("Reward: " + str(reward))
+            return reward
+
+        print("Reward: " + str(reward))
         return reward
         
     
@@ -91,8 +109,11 @@ class DQNAgent:
         # Softmax normalizes the outputs to look like a probablity distribution
         model = Sequential()    
         model.add(Dense(output_dim=120, activation="relu", input_dim=self.state_size))
+        model.add(Dropout(0.15))
         model.add(Dense(output_dim=120, activation="relu"))
+        model.add(Dropout(0.15))
         model.add(Dense(output_dim=120, activation="relu"))
+        model.add(Dropout(0.15))
         model.add(Dense(output_dim=self.action_size, activation="softmax"))
         model.compile(metrics=["accuracy"], loss="mse", optimizer=Adam(self.learning_rate))
         model.summary()
@@ -134,13 +155,13 @@ class DQNAgent:
     def short_memory(self, state, action, reward, next_state, game_over):
         if not game_over:
             # Calculate the learned value - Last part of the Q() equation
-            new_q = reward + self.gamma * np.amax(self.model.predict(next_state.reshape((1,4)))[0])
+            new_q = reward + self.gamma * np.amax(self.model.predict(next_state.reshape((1,self.state_size)))[0])
         else:
             new_q = reward # If the game is over there is no next state
 
         # Grab current q value based off the current state and update the current 
         # q value to the new q value based off the action taken. Then retrain the 
         # network off the current state and the new q values
-        current_q = self.model.predict(state.reshape((1,4)))
+        current_q = self.model.predict(state.reshape((1,self.state_size)))
         current_q[0][np.argmax(action)] = new_q 
-        self.model.fit(state.reshape((1,4)), current_q, epochs=1, verbose=0)
+        self.model.fit(state.reshape((1,self.state_size)), current_q, epochs=1, verbose=0)

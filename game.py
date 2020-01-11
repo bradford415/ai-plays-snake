@@ -5,6 +5,7 @@ game.py - Main file for the game snake. This is the only required file as long a
 import pygame
 import random
 import time
+import math
 import numpy as np
 from keras.utils import to_categorical
 from random import randint
@@ -12,7 +13,7 @@ from DQN import DQNAgent
 
 # CONSTANTS
 snake_block = 20
-snake_speed = 50
+snake_speed = 200
 move = snake_block # amount snake moves per frame
 SCREEN_X = 800
 SCREEN_Y = 600
@@ -35,6 +36,7 @@ class Snake:
         self.y_change = 0
         self.game_over = 0
         self.length = 1
+        self.old_dist_food = 0
 
     # Create Snake
     def create(self, snake_all):
@@ -110,9 +112,10 @@ class Game:
 def initialize_game(snake, food, agent):
     current_state = agent.get_state(snake, food)
     action = [0,0,1,0] # Random initial action
+    snake.old_dist_food = math.sqrt(((food.x - snake.x)**2) + ((food.y - snake.y)**2))
     snake.move(snake, food, action, agent)
     next_state = agent.get_state(snake,food)
-    reward = agent.reward()
+    reward = agent.reward(snake, food)
     agent.update_memory(current_state, action, reward, next_state, agent.game_over)
     agent.replay_memory()
     
@@ -138,7 +141,7 @@ def main():
     num_games = 0
     
 
-    while num_games < 100:
+    while num_games < 300:
 
         snake_list = []
         snake = Snake()
@@ -149,7 +152,7 @@ def main():
         initialize_game(snake, food, agent)
         agent.game_over = 0
 
-        agent.epsilon = 70 - (num_games * 5)
+        agent.epsilon = 30 - num_games
 
         snake.x = round(random.randrange(0, SCREEN_X - snake_block) / 20) * 20
         snake.y = round(random.randrange(0, SCREEN_Y - snake_block) / 20) * 20
@@ -160,6 +163,7 @@ def main():
         while not agent.game_over:
 
             screen.fill(BLACK)
+            print("")
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: # Close the window
@@ -179,11 +183,13 @@ def main():
             print("Epsilon: " + str(agent.epsilon))
             if randint(0,100) < agent.epsilon:
                 action = to_categorical(randint(0,3), num_classes=4)
-                print("random")
+                print("Random")
             else:
-                prediction = agent.model.predict(np.array(current_state.reshape(1,4)))
+                prediction = agent.model.predict(np.array(current_state.reshape(1,agent.state_size)))
                 action = to_categorical(np.argmax(prediction[0]), num_classes=4)
                 print("Calculated")
+
+            snake.old_dist_food = math.sqrt(((food.x - snake.x)**2) + ((food.y - snake.y)**2))
 
             snake.move(snake, food, action, agent)
             snake.x += snake.x_change
@@ -195,7 +201,7 @@ def main():
             snake_list.append(snake_head)
 
             next_state = agent.get_state(snake,food)
-            reward = agent.reward()
+            reward = agent.reward(snake, food)
             agent.short_memory(current_state, action, reward, next_state, agent.game_over)
             agent.update_memory(current_state, action, reward, next_state, agent.game_over)
     
@@ -229,7 +235,7 @@ def main():
         game.message("You Lost! The game will restart automatically", RED)
         game.stats(snake.length - 1, snake_block*3, SCREEN_Y/2 + 30, "Final Score")
         pygame.display.update()
-        pygame.time.wait(2000)
+        pygame.time.wait(300)
 
 
     pygame.quit()
