@@ -52,7 +52,7 @@ class DQNAgent:
             snake.x > food.x, # Snake is right of food
             snake.y < food.y, # Snake is above food
             snake.y > food.y,  # Snake is below food
-            snake.length > 2 # If the snake is greater than 2 - prevent from backing into itself
+            snake.length > 2 and not agent.eaten # If the snake is greater than 2 - prevent from backing into itself
             ]
 
         # Initialize to 1's or 0's
