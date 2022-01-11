@@ -9,5 +9,8 @@ accomplished by many others, however I chose to work on this project because it 
 This project was created to help me expand my knowledge of machine learning and reinforce what I learned in my [Creative Inquiry](https://github.com/CUFCTL).
 It also gave me a fun project to work on over winter break.
 
+### Current Project State
+AI learns to get passed the first few levels but then begins to back into itself.
+
 ## ** Not Finished **
 
